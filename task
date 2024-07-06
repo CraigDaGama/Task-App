@@ -1,0 +1,194 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <conio.h>
+
+#define max_tasks 100
+#define task_length 100
+
+typedef struct {
+    int id;
+    char heading[task_length];
+    int completed;
+} Task;
+
+Task tasks[max_tasks];
+int taskCount = 0;
+
+void loadTasks() {
+    FILE *file = fopen("tasks.txt", "r");
+    if (file == NULL) {
+        return;
+    }
+
+    while (fscanf(file, "%d %[^\n] %d\n", &tasks[taskCount].id, tasks[taskCount].heading, &tasks[taskCount].completed) != EOF) {
+        taskCount++;
+    }
+
+    fclose(file);
+}
+
+void saveTasks() {
+    FILE *file = fopen("tasks.txt", "w");
+    if (file == NULL) {
+        printf("Error saving tasks.\n");
+        return;
+    }
+
+    for (int i = 0; i < taskCount; i++) {
+        if (!tasks[i].completed) {
+            fprintf(file, "%d\n%s\n%d\n", i + 1, tasks[i].heading, tasks[i].completed);
+        }
+    }
+
+    fclose(file);
+}
+
+void renumberTasks() {
+    int newIndex = 0;
+    for (int i = 0; i < taskCount; i++) {
+        if (!tasks[i].completed) {
+            tasks[newIndex] = tasks[i];
+            tasks[newIndex].id = newIndex + 1;
+            newIndex++;
+        }
+    }
+    taskCount = newIndex;
+}
+
+void addTask() {
+    if (taskCount >= max_tasks) {
+        printf("Cannot add more tasks. The list is full.\n");
+        return;
+    }
+
+    Task newTask;
+    newTask.id = taskCount + 1;
+
+    printf("Enter task heading: ");
+    scanf(" %[^\n]", newTask.heading);
+    newTask.completed = 0;
+
+    tasks[taskCount] = newTask;
+    taskCount++;
+
+    saveTasks();
+    printf("Task added successfully!\n");
+}
+
+void displayTasks(int currentIndex) {
+    system("cls");
+    for (int i = 0; i < taskCount; i++) {
+        if (i == currentIndex) {
+            printf("\033[47;30m");
+        }
+        printf("%d. %s (%s)\n", tasks[i].id, tasks[i].heading, tasks[i].completed ? "c" : " ");
+        if (i == currentIndex) {
+            printf("\033[0m");
+        }
+    }
+    printf("\nPress 'enter' to mark completed tasks\nPress 's' to save\nPress 'Esc' to go back to the main menu.\n");
+}
+
+void viewTasks() {
+    int currentIndex = 0;
+    displayTasks(currentIndex);
+
+    while (1) {
+        int ch = _getch();
+        if (ch == 0 || ch == 224) {
+            // Arrow keys
+            ch = _getch();
+            if (ch == 72) { // Up arrow
+                if (currentIndex > 0) {
+                    currentIndex--;
+                }
+            } else if (ch == 80) { // Down arrow
+                if (currentIndex < taskCount - 1) {
+                    currentIndex++;
+                }
+            }
+        } else if (ch == 13) { // Enter key
+            tasks[currentIndex].completed = !tasks[currentIndex].completed;
+        } else if (ch == 's' || ch == 'S') { // Save key
+            renumberTasks();
+            saveTasks();
+            printf("Tasks saved successfully!\n");
+            break;
+        } else if (ch == 27) { // Esc key
+            break;
+        }
+        displayTasks(currentIndex);
+    }
+}
+
+void deleteTask() {
+    system("cls");
+    if (taskCount == 0) {
+        printf("No tasks to delete.\n");
+        return;
+    }
+
+    for (int i = 0; i < taskCount; i++) {
+        if (!tasks[i].completed) {
+            printf("%d. %s\n", tasks[i].id, tasks[i].heading);
+        }
+    }
+
+    printf("\nEnter task number to delete or 'Esc' to return: ");
+    char choice[10];
+    scanf("%s", choice);
+    if (choice[0] == 27) { // Esc key
+        return;
+    } else {
+        int taskNumber = atoi(choice);
+        if (taskNumber > 0 && taskNumber <= taskCount) {
+            for (int i = taskNumber - 1; i < taskCount - 1; i++) {
+                tasks[i] = tasks[i + 1];
+            }
+            taskCount--;
+            saveTasks();
+            renumberTasks();
+            printf("Task deleted successfully!\n");
+        } else {
+            printf("Invalid task number.\n");
+        }
+    }
+}
+
+
+void menu() {
+    loadTasks();
+    int choice;
+    while (1) {
+        system("cls");
+        printf("Task Management System\n");
+        printf("1. Add Task\n");
+        printf("2. View Tasks\n");
+        printf("3. Delete Task\n");
+        printf("4. Quit\n");
+        printf("Enter your choice: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1:
+                addTask();
+                break;
+            case 2:
+                viewTasks();
+                break;
+            case 3:
+                deleteTask();
+                break;
+            case 4:
+                exit(0);
+            default:
+                printf("Invalid choice. Please try again.\n");
+        }
+    }
+}
+
+int main() {
+    menu();
+    return 0;
+}
